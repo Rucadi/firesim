@@ -27,8 +27,7 @@ private[midas] class MidasTransforms extends Transform {
     val p = state.annotations.collectFirst({ case midas.stage.phases.ConfigParametersAnnotation(p)  => p }).get
     val optionalTargetTransforms = if (p(GenerateMultiCycleRamModels)) Seq(
       new fame.LabelSRAMModels,
-      new ResolveAndCheck,
-      new EmitFirrtl("post-wrap-sram-models.fir"))
+      new ResolveAndCheck)
     else Seq()
 
     val xforms = Seq(
@@ -43,57 +42,47 @@ private[midas] class MidasTransforms extends Transform {
       EnsureNoTargetIO,
       new BridgeExtraction,
       new ResolveAndCheck,
-      new EmitFirrtl("post-bridge-extraction.fir"),
       new fame.EmitFAMEAnnotations("post-bridge-extraction.json"),
       new HighFirrtlToMiddleFirrtl,
       new MiddleFirrtlToLowFirrtl,
       new AutoCounterTransform,
-      new EmitFirrtl("post-autocounter.fir"),
       new fame.EmitFAMEAnnotations("post-autocounter.json"),
       new ResolveAndCheck,
       new AssertPass,
       new PrintSynthesis,
       new ResolveAndCheck,
-      new EmitFirrtl("post-debug-synthesis.fir"),
       new fame.EmitFAMEAnnotations("post-debug-synthesis.json"),
       // All trigger sources and sinks must exist in the target RTL before this pass runs
       TriggerWiring,
-      new EmitFirrtl("post-trigger-wiring.fir"),
       new fame.EmitFAMEAnnotations("post-trigger-wiring.json"),
       // We should consider moving these lower
       ChannelClockInfoAnalysis,
       UpdateBridgeClockInfo,
       fame.WrapTop,
       fame.LabelMultiThreadedInstances,
-      new ResolveAndCheck,
-      new EmitFirrtl("post-wrap-top.fir")) ++
+      new ResolveAndCheck) ++
     optionalTargetTransforms ++
     Seq(
       new fame.ExtractModel,
       new ResolveAndCheck,
-      new EmitFirrtl("post-extract-model.fir"),
       new HighFirrtlToMiddleFirrtl,
       new MiddleFirrtlToLowFirrtl,
       new fame.FAMEDefaults,
-      new EmitFirrtl("post-fame-defaults.fir"),
       new fame.EmitFAMEAnnotations("post-fame-defaults.json"),
       fame.FindDefaultClocks,
       new fame.EmitFAMEAnnotations("post-find-default-clocks.json"),
       new fame.ChannelExcision,
       new fame.EmitFAMEAnnotations("post-channel-excision.json"),
-      new EmitFirrtl("post-channel-excision.fir"),
       new fame.InferModelPorts,
       new fame.EmitFAMEAnnotations("post-infer-model-ports.json"),
       new fame.FAMETransform,
       DefineAbstractClockGate,
-      new EmitFirrtl("post-fame-transform.fir"),
       new fame.EmitFAMEAnnotations("post-fame-transform.json"),
       new ResolveAndCheck,
       fame.MultiThreadFAME5Models,
       fame.ImplementThreadedSyncReadMems,
       new ResolveAndCheck,
       new fame.EmitAndWrapRAMModels,
-      new EmitFirrtl("post-gen-sram-models.fir"),
       new ResolveAndCheck,
       new SimulationMapping(state.circuit.main),
       xilinx.HostSpecialization,
